@@ -1,9 +1,12 @@
-from simple_pubsub import Client, Server, Package    
-from multiprocessing import Process
-from time import sleep
+import logging
 from random import randint
 
+import simple_pubsub
+from simple_pubsub import Client, Package, Server
+
 HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
+for handlers in simple_pubsub.log.handlers:
+    handlers.setLevel(logging.DEBUG)
 
 def test_init_server():
     server = Server(HOST, randint(1024, 65432))
@@ -14,13 +17,13 @@ def test_init_server():
 def test_topic_subscribe():
     port = randint(1024, 65432)
     server = Server(HOST, port)
-    server.init(with_process=False)
+    server.init()
 
-    pubsubA = Client(HOST, port)
-    pubsubA.subscribe('A')
-
-    assert dict(server._Server__topics.keys()) == {'A'}
-    assert len(server._Server__topics['A']) == 1
+    client1 = Client(HOST, port)
+    client1.subscribe('topic A')
+    
+    topics = server.get_topics()
+    assert topics == {'topic A': ((HOST, port),)}
     
     server.stop()
 
