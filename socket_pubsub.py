@@ -8,6 +8,7 @@ import traceback
 from dataclasses import dataclass
 from multiprocessing import Process
 from socket import AF_INET, SOCK_STREAM, socket
+import select
 from threading import Thread
 from time import sleep
 from typing import Any, Callable, Dict, Optional, Set, Text
@@ -102,6 +103,11 @@ class Client:
 
     def send(self, topic: Text, message: object) -> None:
         self.send_and_retry(Package('message', topic, message))
+    
+    def wait(self, timeout: float) -> bool:
+        """Waits until receive a message or timeout occurred"""
+        ready = select.select([self.conn], [], [], timeout)
+        return bool(ready[0])
 
     def receive(self) -> Package:
         return recv(self.conn)
@@ -109,6 +115,7 @@ class Client:
 
 class Server:
     clint_counter = 0
+
     def __init__(self, host, port, verbose=True) -> None:
         self.host = host
         self.port = port
@@ -138,13 +145,22 @@ class Server:
         return response.message
 
     def __subscribe(self, data: Package, conn: socket):
+        if data.topic is None:
+            raise ValueError('Topic cant be None.')
+
         if data.topic not in self.__topics:
             self.__topics[data.topic] = {conn}
         else:
             self.__topics[data.topic].add(conn)
 
     def __unsubscribe(self, data: Package, conn: socket):
+        if data.topic is None:
+            raise ValueError('Topic cant be None.')
+
         self.__topics[data.topic].remove(conn)
+
+        if len(self.__topics[data.topic]) == 0:
+            del self.__topics[data.topic]
 
     def __disconnect_client(self, data: Package, conn: socket):
         for topic, conns in self.__topics.items():
@@ -166,7 +182,7 @@ class Server:
 
     def server_loop(self):
         log.debug('Processo inicializado.')
-        
+
         with socket(AF_INET, SOCK_STREAM) as s:
             s.bind((self.host, self.port))
             s.listen()
