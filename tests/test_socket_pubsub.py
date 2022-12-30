@@ -86,3 +86,21 @@ def test_send_a_object():
     msg = client1.receive()
     assert msg.message == [1,2,3,4,5]
 
+
+def test_topic_multiple_unsubscribe():
+    TOPIC = 'topic A'
+    port = randint(1024, 65432)
+    server = Server(HOST, port)
+    server.init()
+
+    client1 = Client(HOST, port)
+    client1.subscribe(TOPIC)
+    try:
+        client1.unsubscribe(TOPIC)
+        client1.unsubscribe(TOPIC)
+        client1.unsubscribe(TOPIC)
+        client1.subscribe(TOPIC)
+    except Exception:
+        assert False
+
+

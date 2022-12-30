@@ -157,6 +157,9 @@ class Server:
         if data.topic is None:
             raise ValueError('Topic cant be None.')
 
+        if data.topic not in self.__topics:
+            return
+
         self.__topics[data.topic].remove(conn)
 
         if len(self.__topics[data.topic]) == 0:
